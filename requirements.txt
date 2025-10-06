@@ -1,5 +1,6 @@
 streamlit
 requests
 pandas
-plotly
-Pillow
+pillow
+earthaccess
+netCDF4

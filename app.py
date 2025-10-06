@@ -8,6 +8,9 @@ from PIL import Image
 import io
 import os
 from typing import Optional, Dict, Any, Tuple, List
+import earthaccess
+import netCDF4 as nc
+import numpy as np
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 
@@ -162,7 +165,7 @@ def get_forecast(city: str, api_key: str) -> Optional[Dict[str, Any]]:
         return None
 
 def get_air_quality(lat: float, lon: float, api_key: str) -> Optional[Dict[str, Any]]:
-    """Busca dados da qualidade do ar por coordenadas."""
+    """Busca dados da qualidade do ar por coordenadas usando OpenWeatherMap (fallback)."""
     base_url = "http://api.openweathermap.org/data/2.5/air_pollution"
     params = {"lat": lat, "lon": lon, "appid": api_key}
     try:
@@ -170,6 +173,112 @@ def get_air_quality(lat: float, lon: float, api_key: str) -> Optional[Dict[str, 
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException:
+        return None
+
+def get_tempo_air_quality(lat: float, lon: float) -> Optional[Dict[str, Any]]:
+    """Busca dados de qualidade do ar do satélite TEMPO da NASA para NO2."""
+    try:
+        # Autenticação (assumindo que as credenciais já estão configuradas ou serão solicitadas)
+        # auth = earthaccess.login(persist=True) # Isso pode exigir interação do usuário
+        # Para evitar bloqueio, vamos tentar sem login persistente ou assumir que já está logado
+        # ou que o token está em cache.
+        # Se falhar, o usuário precisará configurar as credenciais Earthdata.
+
+        # Definir o período de tempo para o dia atual
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        date_start = f"{today} 00:00:00"
+        date_end = f"{today} 23:59:59"
+
+        # Pesquisar por grânulos de dados de NO2 do TEMPO (Nível 3)
+        # short_name = "TEMPO_NO2_L3" # Coleção de NO2
+        # version = "V03" # Versão mais recente disponível no tutorial
+        
+        # Usando TEMPO_NO2_L2 para dados mais brutos e próximos do tempo real, se necessário
+        # O tutorial usa L3, mas para qualidade do ar em tempo real, L2 pode ser mais apropriado
+        # No entanto, L3 é mais fácil de usar por ser gridded.
+        # Vamos usar L3 como no tutorial para simplificar a integração inicial.
+        short_name = "TEMPO_NO2_L3"
+        version = "V03"
+
+        # Pesquisar dados para a localização e período de tempo
+        results = earthaccess.search_data(
+            short_name=short_name,
+            version=version,
+            temporal=(date_start, date_end),
+            point=(lon, lat),
+            cloud_hosted=True # Priorizar dados hospedados na nuvem para acesso mais rápido
+        )
+
+        if not results:
+            print("Nenhum dado TEMPO encontrado para a localização e período.")
+            return None
+
+        # Baixar o grânulo mais recente (ou o primeiro, para simplificar)
+        # O earthaccess.download pode exigir credenciais Earthdata se não estiverem em cache
+        # Para evitar interação, vamos tentar abrir diretamente se possível, ou baixar para um temp file
+        # Para este exemplo, vamos baixar o primeiro resultado para um diretório temporário
+        temp_dir = "/tmp/tempo_data"
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Baixar apenas o primeiro arquivo para simplificar
+        files = earthaccess.download(results[0:1], local_path=temp_dir)
+
+        if not files:
+            print("Falha ao baixar dados TEMPO.")
+            return None
+
+        file_path = files[0]
+
+        # Ler o arquivo netCDF4
+        with nc.Dataset(file_path) as ds:
+            prod = ds.groups["product"]
+            # NO2 troposférico é um bom indicador de qualidade do ar
+            trop_NO2_column = prod.variables["vertical_column_troposphere"][:]
+            fv_trop_NO2 = prod.variables["vertical_column_troposphere"].getncattr("_FillValue")
+            
+            # Obter latitude e longitude para mapeamento
+            lats = ds.variables["latitude"][:]
+            lons = ds.variables["longitude"][:]
+
+            # Encontrar o pixel mais próximo da localização fornecida
+            lat_idx = np.abs(lats - lat).argmin()
+            lon_idx = np.abs(lons - lon).argmin()
+
+            # Extrair o valor de NO2 para o pixel mais próximo
+            no2_value = trop_NO2_column[0, lat_idx, lon_idx]
+
+            # Tratar valores de preenchimento/inválidos
+            if no2_value == fv_trop_NO2 or no2_value < 0:
+                print("Valor de NO2 inválido ou preenchido.")
+                return None
+            
+            # Converter para uma unidade mais comum se necessário, ou usar a unidade original
+            # A unidade é molecules/cm^2. Para uma integração simples, podemos retornar este valor.
+            # Para converter para µg/m³, seria necessário mais cálculo e massa molar.
+            # Para fins de demonstração, vamos retornar o valor bruto e um AQI simplificado.
+
+            # Mapeamento simplificado de NO2 para AQI (exemplo, não cientificamente preciso)
+            # Valores de referência (mol/cm^2):
+            # Bom: < 5e15
+            # Moderado: 5e15 - 10e15
+            # Ruim: > 10e15
+            
+            aqi_tempo = 1 # Bom por padrão
+            if no2_value > 10e15:
+                aqi_tempo = 4 # Ruim
+            elif no2_value > 5e15:
+                aqi_tempo = 3 # Moderado
+            
+            # Retornar um dicionário similar ao da API OpenWeatherMap para facilitar a integração
+            return {
+                "list": [{
+                    "main": {"aqi": aqi_tempo},
+                    "components": {"no2": float(no2_value), "o3": 0.0, "pm2_5": 0.0} # Apenas NO2 do TEMPO
+                }]
+            }
+
+    except Exception as e:
+        print(f"Erro ao buscar dados TEMPO: {e}")
         return None
 
 # --- FUNÇÕES DE CÁLCULO E ANÁLISE ---
@@ -709,6 +818,14 @@ def main():
         st.error("Por favor, defina a variável de ambiente OPENWEATHER_API_KEY com sua chave da API do OpenWeatherMap.")
         st.stop()
 
+    # Credenciais da NASA Earthdata para earthaccess
+    # Para usar a API TEMPO da NASA, você precisa de uma conta Earthdata e configurar suas credenciais.
+    # Visite https://urs.earthdata.nasa.gov/users/new para criar uma conta.
+    # As credenciais podem ser configuradas via variáveis de ambiente EARTHDATA_USERNAME e EARTHDATA_PASSWORD
+    # ou usando `earthaccess.login(persist=True)` e inserindo-as interativamente (não possível neste ambiente).
+    # Para este aplicativo, vamos assumir que as variáveis de ambiente estão configuradas ou que o usuário fará o login manualmente se necessário.
+
+
     st.sidebar.header("🌍 Configurações de Clima")
 
     with st.sidebar:
@@ -787,7 +904,13 @@ def main():
                 lon = weather_data['coord']['lon']
 
                 forecast_data = get_forecast(city_to_display, api_key)
-                air_quality_data = get_air_quality(lat, lon, api_key)
+                # Tentar obter dados de qualidade do ar da API TEMPO da NASA
+                air_quality_data = get_tempo_air_quality(lat, lon)
+                
+                # Se a API TEMPO não retornar dados, usar a API OpenWeatherMap como fallback
+                if not air_quality_data:
+                    air_quality_data = get_air_quality(lat, lon, api_key)
+
 
                 # Calcula o score da atividade e mostra a recomendação
                 score, recommendations = calculate_activity_score(
@@ -818,4 +941,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
