@@ -4,3 +4,5 @@ pandas
 pillow
 earthaccess
 netCDF4
+plotly
+numpy

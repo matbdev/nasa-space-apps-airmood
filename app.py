@@ -179,6 +179,7 @@ def get_tempo_air_quality(lat: float, lon: float) -> Optional[Dict[str, Any]]:
     """Fetches air quality data (NO2) from NASA's TEMPO satellite."""
     try:
         # Autenticação usando variáveis de ambiente
+        # O earthaccess.login() busca automaticamente por EARTHDATA_USERNAME e EARTHDATA_PASSWORD
         earthdata_username = os.getenv('EARTHDATA_USERNAME')
         earthdata_password = os.getenv('EARTHDATA_PASSWORD')
         
@@ -186,8 +187,8 @@ def get_tempo_air_quality(lat: float, lon: float) -> Optional[Dict[str, Any]]:
             print("EARTHDATA credentials not found in environment variables.")
             return None
         
-        # Fazer login com as credenciais
-        auth = earthaccess.login(strategy="environment")
+        # Fazer login - earthaccess detecta automaticamente as variáveis de ambiente
+        auth = earthaccess.login()
         
         # Definir o período de tempo para o dia atual
         today = datetime.utcnow().strftime("%Y-%m-%d")
@@ -345,20 +346,20 @@ def calculate_activity_score(weather_data: Dict, air_quality_data: Optional[Dict
                 recommendations.append("Inadequate weather conditions for sports")
             elif weather_main in ["Drizzle", "Mist"]:
                 score -= 20
-    
+        
         elif activity == "Light Exercises":
             if temp < -5 or temp > 38:
                 score -= 15
             if humidity > 90:
                 score -= 10
-    
+        
         elif activity == "Outdoor Rest":
             if weather_main in ["Thunderstorm"]:
                 score -= 30
                 recommendations.append("Storms are not safe for outdoor activities")
             elif temp < -10 or temp > 40:
                 score -= 10
-    
+        
     # Ajustes por condição física
     condition_multipliers = {
         "Excellent": 1.0,
@@ -568,6 +569,129 @@ def voice_assistant_component(text_to_speak: Optional[str] = None):
     )
 
 
+def display_air_quality_section(air_quality_data: Optional[Dict], city: str):
+    """Displays comprehensive air quality information with WHO guidelines at the top of the page."""
+    if not air_quality_data:
+        return
+    
+    st.markdown("---")
+    st.header("🌬️ Air Quality Index")
+    st.markdown(f"**Current air quality conditions for {city}**")
+    
+    aqi = air_quality_data['list'][0]['main']['aqi']
+    aqi_levels = {
+        1: ("Good", "🟢", "#28a745"),
+        2: ("Fair", "🟡", "#ffc107"),
+        3: ("Moderate", "🟠", "#fd7e14"),
+        4: ("Poor", "🔴", "#dc3545"),
+        5: ("Very Poor", "🟣", "#6f42c1")
+    }
+    aqi_description, aqi_emoji, aqi_color = aqi_levels.get(aqi, ("Unknown", "⚪", "#6c757d"))
+    
+    # Display main AQI card
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, {aqi_color}22 0%, {aqi_color}44 100%); 
+                border-left: 6px solid {aqi_color}; 
+                border-radius: 10px; 
+                padding: 20px; 
+                margin-bottom: 20px;">
+        <h2 style="margin: 0; color: {aqi_color};">{aqi_emoji} {aqi_description}</h2>
+        <p style="margin: 5px 0 0 0; font-size: 1.1em;">Air Quality Index: {aqi}/5</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Health recommendations based on AQI
+    health_recommendations = {
+        1: "Air quality is satisfactory, and air pollution poses little or no risk.",
+        2: "Air quality is acceptable. However, there may be a risk for some people, particularly those who are unusually sensitive to air pollution.",
+        3: "Members of sensitive groups may experience health effects. The general public is less likely to be affected.",
+        4: "Some members of the general public may experience health effects; members of sensitive groups may experience more serious health effects.",
+        5: "Health alert: The risk of health effects is increased for everyone."
+    }
+    
+    st.info(f"**Health Advisory:** {health_recommendations.get(aqi, 'No information available.')}")
+    
+    # Display pollutant levels with WHO guidelines
+    st.subheader("Pollutant Levels & WHO Guidelines")
+    
+    components_data = air_quality_data['list'][0]['components']
+    
+    # WHO Air Quality Guidelines (2021)
+    who_guidelines = {
+        'pm2_5': {'annual': 5, 'daily': 15, 'unit': 'µg/m³', 'name': 'PM2.5'},
+        'pm10': {'annual': 15, 'daily': 45, 'unit': 'µg/m³', 'name': 'PM10'},
+        'no2': {'annual': 10, 'daily': 25, 'unit': 'µg/m³', 'name': 'NO₂'},
+        'o3': {'peak_season': 60, 'daily': 100, 'unit': 'µg/m³', 'name': 'O₃'},
+        'co': {'daily': 4000, 'unit': 'µg/m³', 'name': 'CO'},
+        'so2': {'daily': 40, 'unit': 'µg/m³', 'name': 'SO₂'}
+    }
+    
+    # Create columns for pollutants
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        pm25 = components_data.get('pm2_5', 0)
+        pm25_status = "✅ Good" if pm25 <= 15 else "⚠️ Exceeds WHO guideline"
+        st.metric("PM2.5 (Fine Particles)", f"{pm25:.1f} µg/m³", delta=None)
+        st.caption(f"WHO 24h guideline: ≤15 µg/m³")
+        st.caption(pm25_status)
+        
+        no2 = components_data.get('no2', 0)
+        no2_status = "✅ Good" if no2 <= 25 else "⚠️ Exceeds WHO guideline"
+        st.metric("NO₂ (Nitrogen Dioxide)", f"{no2:.1f} µg/m³", delta=None)
+        st.caption(f"WHO 24h guideline: ≤25 µg/m³")
+        st.caption(no2_status)
+    
+    with col2:
+        pm10 = components_data.get('pm10', 0)
+        pm10_status = "✅ Good" if pm10 <= 45 else "⚠️ Exceeds WHO guideline"
+        st.metric("PM10 (Coarse Particles)", f"{pm10:.1f} µg/m³", delta=None)
+        st.caption(f"WHO 24h guideline: ≤45 µg/m³")
+        st.caption(pm10_status)
+        
+        so2 = components_data.get('so2', 0)
+        so2_status = "✅ Good" if so2 <= 40 else "⚠️ Exceeds WHO guideline"
+        st.metric("SO₂ (Sulfur Dioxide)", f"{so2:.1f} µg/m³", delta=None)
+        st.caption(f"WHO 24h guideline: ≤40 µg/m³")
+        st.caption(so2_status)
+    
+    with col3:
+        o3 = components_data.get('o3', 0)
+        o3_status = "✅ Good" if o3 <= 100 else "⚠️ Exceeds WHO guideline"
+        st.metric("O₃ (Ozone)", f"{o3:.1f} µg/m³", delta=None)
+        st.caption(f"WHO 8h guideline: ≤100 µg/m³")
+        st.caption(o3_status)
+        
+        co = components_data.get('co', 0)
+        co_status = "✅ Good" if co <= 4000 else "⚠️ Exceeds WHO guideline"
+        st.metric("CO (Carbon Monoxide)", f"{co:.1f} µg/m³", delta=None)
+        st.caption(f"WHO 24h guideline: ≤4000 µg/m³")
+        st.caption(co_status)
+    
+    # Additional pollutants if available
+    if 'nh3' in components_data:
+        st.metric("NH₃ (Ammonia)", f"{components_data['nh3']:.1f} µg/m³")
+    
+    # Pollutant information
+    with st.expander("ℹ️ Learn about air pollutants"):
+        st.markdown("""
+        **PM2.5 (Fine Particulate Matter):** Particles with diameter ≤2.5 micrometers. Can penetrate deep into lungs and bloodstream.
+        
+        **PM10 (Coarse Particulate Matter):** Particles with diameter ≤10 micrometers. Can irritate airways and worsen respiratory conditions.
+        
+        **NO₂ (Nitrogen Dioxide):** Gas produced by combustion. Can inflame airways and reduce immunity to lung infections.
+        
+        **O₃ (Ozone):** Ground-level ozone formed by chemical reactions. Can cause breathing problems and trigger asthma.
+        
+        **CO (Carbon Monoxide):** Odorless gas from incomplete combustion. Reduces oxygen delivery to body organs.
+        
+        **SO₂ (Sulfur Dioxide):** Gas from burning fossil fuels. Can affect respiratory system and lung function.
+        
+        *Guidelines based on WHO Global Air Quality Guidelines 2021*
+        """)
+    
+    st.markdown("---")
+
 def display_recommendation_card(score: int, recommendations: List[str], activity: str, condition: str):
     """Displays the main recommendation card."""
     status, css_class, emoji = get_recommendation_status(score)
@@ -689,7 +813,7 @@ def display_alerts_panel(weather_data: Dict, air_quality_data: Optional[Dict]):
             </div>
             """, unsafe_allow_html=True)
 
-def display_weather(weather_data, forecast_data=None, air_quality_data=None):
+def display_weather(weather_data, forecast_data=None):
     """Displays detailed weather information."""
     if not weather_data:
         return
@@ -763,31 +887,7 @@ def display_weather(weather_data, forecast_data=None, air_quality_data=None):
                 </div>
                 """, unsafe_allow_html=True)
 
-    # Exibir qualidade do ar
-    if air_quality_data:
-        st.subheader("Air Quality")
-        aqi = air_quality_data['list'][0]['main']['aqi']
-        aqi_levels = {
-            1: "Good",
-            2: "Fair",
-            3: "Moderate",
-            4: "Poor",
-            5: "Very Poor"
-        }
-        aqi_description = aqi_levels.get(aqi, "Unknown")
 
-        components_data = air_quality_data['list'][0]['components']
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("AQI", aqi_description, delta_color="off")
-        with col2:
-            st.metric("PM2.5", f"{components_data['pm2_5']:.1f} µg/m³")
-        with col3:
-            st.metric("O3", f"{components_data['o3']:.1f} µg/m³")
-        with col4:
-            st.metric("CO", f"{components_data['co']:.1f} µg/m³")
-
-        st.info("**PM2.5**: Fine particles | **O3**: Ozone | **CO**: Carbon Monoxide")
 
 def display_world_map():
     """Displays an interactive world map based on user or default location."""
@@ -921,6 +1021,9 @@ def main():
                     air_quality_data = get_air_quality(lat, lon, api_key)
 
 
+                # Display Air Quality Section FIRST (top of the page)
+                display_air_quality_section(air_quality_data, city_to_display)
+
                 # Calcula o score da atividade e mostra a recomendação
                 score, recommendations = calculate_activity_score(
                     weather_data, air_quality_data, activity, condition
@@ -938,7 +1041,7 @@ def main():
                 st.session_state.speech_summary = speech_summary
 
                 # Exibe informações detalhadas do tempo
-                display_weather(weather_data, forecast_data, air_quality_data)
+                display_weather(weather_data, forecast_data)
             else:
                 st.error(
                     f"Não foi possível encontrar dados para a cidade '{city_to_display}'. Verifique o nome e tente novamente.")
