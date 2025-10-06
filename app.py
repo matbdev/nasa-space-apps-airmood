@@ -12,10 +12,10 @@ import earthaccess
 import netCDF4 as nc
 import numpy as np
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
+# --- PAGE SETUP ---
 
 def setup_page_config():
-    """Configura as propriedades da página Streamlit."""
+    """Configures the Streamlit page properties."""
     st.set_page_config(
         page_title="Advanced Weather Forecast with Voice Assistant",
         page_icon="🎙️",
@@ -24,7 +24,7 @@ def setup_page_config():
     )
 
 def load_custom_css():
-    """Carrega o CSS customizado para a aplicação."""
+    """Loads custom CSS for the application."""
     st.markdown("""
     <style>
         .block-container { padding-top: 2rem; }
@@ -138,10 +138,10 @@ def load_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNÇÕES DE API ---
+# --- API FUNCTIONS ---
 
 def get_weather(city: str, api_key: str) -> Optional[Dict[str, Any]]:
-    """Busca os dados do tempo atual para uma cidade."""
+    """Fetches current weather data for a city."""
     base_url = "http://api.openweathermap.org/data/2.5/weather"
     params = {"q": city, "appid": api_key, "units": "metric", "lang": "en"}
     try:
@@ -149,11 +149,11 @@ def get_weather(city: str, api_key: str) -> Optional[Dict[str, Any]]:
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao buscar dados do tempo: {e}")
+        print(f"Error fetching weather data: {e}")
         return None
 
 def get_forecast(city: str, api_key: str) -> Optional[Dict[str, Any]]:
-    """Busca a previsão de 5 dias para uma cidade."""
+    """Fetches the 5-day forecast for a city."""
     base_url = "http://api.openweathermap.org/data/2.5/forecast"
     params = {"q": city, "appid": api_key, "units": "metric", "lang": "en", "cnt": 40}
     try:
@@ -161,11 +161,11 @@ def get_forecast(city: str, api_key: str) -> Optional[Dict[str, Any]]:
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao buscar dados da previsão: {e}")
+        print(f"Error fetching forecast data: {e}")
         return None
 
 def get_air_quality(lat: float, lon: float, api_key: str) -> Optional[Dict[str, Any]]:
-    """Busca dados da qualidade do ar por coordenadas usando OpenWeatherMap (fallback)."""
+    """Fetches air quality data by coordinates using OpenWeatherMap (fallback)."""
     base_url = "http://api.openweathermap.org/data/2.5/air_pollution"
     params = {"lat": lat, "lon": lon, "appid": api_key}
     try:
@@ -176,14 +176,19 @@ def get_air_quality(lat: float, lon: float, api_key: str) -> Optional[Dict[str, 
         return None
 
 def get_tempo_air_quality(lat: float, lon: float) -> Optional[Dict[str, Any]]:
-    """Busca dados de qualidade do ar do satélite TEMPO da NASA para NO2."""
+    """Fetches air quality data (NO2) from NASA's TEMPO satellite."""
     try:
-        # Autenticação (assumindo que as credenciais já estão configuradas ou serão solicitadas)
-        # auth = earthaccess.login(persist=True) # Isso pode exigir interação do usuário
-        # Para evitar bloqueio, vamos tentar sem login persistente ou assumir que já está logado
-        # ou que o token está em cache.
-        # Se falhar, o usuário precisará configurar as credenciais Earthdata.
-
+        # Autenticação usando variáveis de ambiente
+        earthdata_username = os.getenv('EARTHDATA_USERNAME')
+        earthdata_password = os.getenv('EARTHDATA_PASSWORD')
+        
+        if not earthdata_username or not earthdata_password:
+            print("EARTHDATA credentials not found in environment variables.")
+            return None
+        
+        # Fazer login com as credenciais
+        auth = earthaccess.login(strategy="environment")
+        
         # Definir o período de tempo para o dia atual
         today = datetime.utcnow().strftime("%Y-%m-%d")
         date_start = f"{today} 00:00:00"
@@ -210,7 +215,7 @@ def get_tempo_air_quality(lat: float, lon: float) -> Optional[Dict[str, Any]]:
         )
 
         if not results:
-            print("Nenhum dado TEMPO encontrado para a localização e período.")
+            print("No TEMPO data found for the location and period.")
             return None
 
         # Baixar o grânulo mais recente (ou o primeiro, para simplificar)
@@ -224,7 +229,7 @@ def get_tempo_air_quality(lat: float, lon: float) -> Optional[Dict[str, Any]]:
         files = earthaccess.download(results[0:1], local_path=temp_dir)
 
         if not files:
-            print("Falha ao baixar dados TEMPO.")
+            print("Failed to download TEMPO data.")
             return None
 
         file_path = files[0]
@@ -249,7 +254,7 @@ def get_tempo_air_quality(lat: float, lon: float) -> Optional[Dict[str, Any]]:
 
             # Tratar valores de preenchimento/inválidos
             if no2_value == fv_trop_NO2 or no2_value < 0:
-                print("Valor de NO2 inválido ou preenchido.")
+                print("Invalid or filled NO2 value.")
                 return None
             
             # Converter para uma unidade mais comum se necessário, ou usar a unidade original
@@ -278,15 +283,15 @@ def get_tempo_air_quality(lat: float, lon: float) -> Optional[Dict[str, Any]]:
             }
 
     except Exception as e:
-        print(f"Erro ao buscar dados TEMPO: {e}")
+        print(f"Error fetching TEMPO data: {e}")
         return None
 
-# --- FUNÇÕES DE CÁLCULO E ANÁLISE ---
+# --- CALCULATION AND ANALYSIS FUNCTIONS ---
 
 def calculate_activity_score(weather_data: Dict, air_quality_data: Optional[Dict], activity: str, condition: str) -> Tuple[int, List[str]]:
-    """Calcula um score para a atividade selecionada com base nas condições."""
+    """Calculates an activity score based on weather conditions, air quality, and user input."""
     if not weather_data:
-        return 0, ["Dados do tempo indisponíveis."]
+        return 0, ["Weather data unavailable."]
     
     temp = weather_data["main"]["temp"]
     humidity = weather_data["main"]["humidity"]
@@ -298,7 +303,7 @@ def calculate_activity_score(weather_data: Dict, air_quality_data: Optional[Dict
     recommendations = []
     
     # Análise específica por atividade
-    if activity == "Corrida":
+    if activity == "Running":
         if 15 <= temp <= 25:
             score += 10
         elif 10 <= temp < 15 or 25 < temp <= 30:
@@ -315,44 +320,44 @@ def calculate_activity_score(weather_data: Dict, air_quality_data: Optional[Dict
             score -= 15
             recommendations.append("Strong winds can make running difficult")
     
-    elif activity == "Caminhada":
-        if 10 <= temp <= 30:
-            score += 5
-        elif temp < 0 or temp > 35:
-            score -= 20
-            recommendations.append("Temperature not ideal for long walks")
+        elif activity == "Walking":
+            if 10 <= temp <= 30:
+                score += 5
+            elif temp < 0 or temp > 35:
+                score -= 20
+                recommendations.append("Temperature not ideal for long walks")
     
-    elif activity == "Ciclismo":
-        if wind_speed > 10:
-            score -= 25
-            recommendations.append("Very strong winds for safe cycling")
-        elif 5 < wind_speed <= 10:
-            score -= 10
-        
-        if 12 <= temp <= 28:
-            score += 8
-        elif temp < 5 or temp > 32:
-            score -= 25
+        elif activity == "Cycling":
+            if wind_speed > 10:
+                score -= 25
+                recommendations.append("Very strong winds for safe cycling")
+            elif 5 < wind_speed <= 10:
+                score -= 10
+            
+            if 12 <= temp <= 28:
+                score += 8
+            elif temp < 5 or temp > 32:
+                score -= 25
     
-    elif activity == "Esportes ao ar livre":
-        if weather_main in ["Rain", "Thunderstorm", "Snow"]:
-            score -= 40
-            recommendations.append("Inadequate weather conditions for sports")
-        elif weather_main in ["Drizzle", "Mist"]:
-            score -= 20
+        elif activity == "Outdoor Sports":
+            if weather_main in ["Rain", "Thunderstorm", "Snow"]:
+                score -= 40
+                recommendations.append("Inadequate weather conditions for sports")
+            elif weather_main in ["Drizzle", "Mist"]:
+                score -= 20
     
-    elif activity == "Exercícios leves":
-        if temp < -5 or temp > 38:
-            score -= 15
-        if humidity > 90:
-            score -= 10
+        elif activity == "Light Exercises":
+            if temp < -5 or temp > 38:
+                score -= 15
+            if humidity > 90:
+                score -= 10
     
-    elif activity == "Descanso ao ar livre":
-        if weather_main in ["Thunderstorm"]:
-            score -= 30
-            recommendations.append("Storms are not safe for outdoor activities")
-        elif temp < -10 or temp > 40:
-            score -= 10
+        elif activity == "Outdoor Rest":
+            if weather_main in ["Thunderstorm"]:
+                score -= 30
+                recommendations.append("Storms are not safe for outdoor activities")
+            elif temp < -10 or temp > 40:
+                score -= 10
     
     # Ajustes por condição física
     condition_multipliers = {
@@ -388,7 +393,7 @@ def calculate_activity_score(weather_data: Dict, air_quality_data: Optional[Dict
     return int(max(0, min(100, score))), recommendations
 
 def get_recommendation_status(score: int) -> Tuple[str, str, str]:
-    """Retorna o status da recomendação com base no score."""
+    """Returns the recommendation status based on the score."""
     if score >= 70:
         return "Recommended", "recommendation-excellent", "✅"
     elif score >= 40:
@@ -396,12 +401,12 @@ def get_recommendation_status(score: int) -> Tuple[str, str, str]:
     else:
         return "Not Recommended", "recommendation-not-recommended", "❌"
 
-# --- FUNÇÕES DE SÍNTESE DE VOZ ---
+# --- SPEECH SYNTHESIS FUNCTIONS ---
 
 def generate_comprehensive_speech_summary(weather_data: Dict, air_quality_data: Optional[Dict], 
                                         score: int, recommendations: List[str], 
                                         activity: str, condition: str, forecast_data: Optional[Dict] = None) -> str:
-    """Gera um resumo completo e detalhado para síntese de voz."""
+    """Generates a comprehensive and detailed summary for speech synthesis."""
     if not weather_data:
         return "Could not retrieve weather data."
 
@@ -468,7 +473,7 @@ def generate_comprehensive_speech_summary(weather_data: Dict, air_quality_data: 
     return summary
 
 def extract_city_from_transcript(text: str) -> Optional[str]:
-    """Extrai o nome da cidade de uma transcrição de voz de forma mais robusta."""
+    """Extracts the city name from a voice transcript more robustly."""
     text = text.lower().strip()
     
     # Remove palavras comuns e conectores
@@ -500,7 +505,7 @@ def extract_city_from_transcript(text: str) -> Optional[str]:
 # --- COMPONENTES DE INTERFACE ---
 
 def voice_assistant_component(text_to_speak: Optional[str] = None):
-    """Cria o componente avançado de assistente de voz com síntese de fala."""
+    """Creates the advanced voice assistant component with speech synthesis."""
     speak_script = ""
     if text_to_speak:
         # Sanitiza o texto para JavaScript
@@ -512,7 +517,7 @@ def voice_assistant_component(text_to_speak: Optional[str] = None):
                 
                 // Cria nova utterance
                 const utterance = new SpeechSynthesisUtterance("{sanitized_text}");
-                utterance.lang = \'pt-BR\';
+                                utterance.lang = \'en-US\';
                 utterance.rate = 0.9;
                 utterance.pitch = 1.0;
                 utterance.volume = 1.0;
@@ -523,7 +528,7 @@ def voice_assistant_component(text_to_speak: Optional[str] = None):
                 }};
                 
                 utterance.onend = function() {{
-                    document.getElementById(\'speakStatus\').textContent = \'✅ Completed\';
+                                        document.getElementById(\'speakStatus\').textContent = \'✅ Speech Finished\';
                     setTimeout(() => {{
                         document.getElementById(\'speakStatus\').textContent = \'\';
                     }}, 2000);
@@ -564,7 +569,7 @@ def voice_assistant_component(text_to_speak: Optional[str] = None):
 
 
 def display_recommendation_card(score: int, recommendations: List[str], activity: str, condition: str):
-    """Exibe o cartão de recomendação principal."""
+    """Displays the main recommendation card."""
     status, css_class, emoji = get_recommendation_status(score)
     
     st.markdown(f"""
@@ -582,7 +587,7 @@ def display_recommendation_card(score: int, recommendations: List[str], activity
                 st.warning(f"**{i}.** {rec}")
 
 def show_notifications(weather_data: Dict, air_quality_data: Optional[Dict]):
-    """Exibe notificações de alerta no topo da página."""
+    """Displays alert notifications at the top of the page."""
     alerts = []
     
     if air_quality_data and air_quality_data["list"][0]["main"]["aqi"] >= 4:
@@ -605,7 +610,7 @@ def show_notifications(weather_data: Dict, air_quality_data: Optional[Dict]):
         st.error(alert)
 
 def display_alerts_panel(weather_data: Dict, air_quality_data: Optional[Dict]):
-    """Exibe painel detalhado de alertas de segurança."""
+    """Displays a detailed safety alerts panel."""
     alerts = []
 
     if air_quality_data and air_quality_data["list"][0]["main"]["aqi"] >= 4:
@@ -685,7 +690,7 @@ def display_alerts_panel(weather_data: Dict, air_quality_data: Optional[Dict]):
             """, unsafe_allow_html=True)
 
 def display_weather(weather_data, forecast_data=None, air_quality_data=None):
-    """Display detailed weather information"""
+    """Displays detailed weather information."""
     if not weather_data:
         return
 
@@ -710,15 +715,15 @@ def display_weather(weather_data, forecast_data=None, air_quality_data=None):
             <div style="text-align: right;">
                 <img src="http://openweathermap.org/img/wn/{icon}@2x.png" width="100">
                 <div class="temperature">{temp:.0f}°C</div>
-                <p>Sensação térmica: {feels_like:.0f}°C</p>
+                <p>Feels like: {feels_like:.0f}°C</p>
             </div>
         </div>
         <hr style="border-top: 1px solid rgba(255,255,255,0.5); margin: 15px 0;">
         <div style="display: flex; justify-content: space-around; text-align: center;">
-            <div>💧 Umidade: {humidity}%</div>
-            <div>💨 Vento: {wind_speed:.1f} m/s</div>
-            <div> barometer Pressão: {pressure} hPa</div>
-            {f"<div>👁️ Visibilidade: {visibility / 1000:.1f} km</div>" if visibility else ""}
+            <div>💧 Humidity: {humidity}%</div>
+            <div>💨 Wind: {wind_speed:.1f} m/s</div>
+            <div> barometer Pressure: {pressure} hPa</div>
+            {f"<div>👁️ Visibility: {visibility / 1000:.1f} km</div>" if visibility else ""}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -760,16 +765,16 @@ def display_weather(weather_data, forecast_data=None, air_quality_data=None):
 
     # Exibir qualidade do ar
     if air_quality_data:
-        st.subheader("Qualidade do Ar")
+        st.subheader("Air Quality")
         aqi = air_quality_data['list'][0]['main']['aqi']
         aqi_levels = {
-            1: "Boa",
-            2: "Razoável",
-            3: "Moderada",
-            4: "Ruim",
-            5: "Muito Ruim"
+            1: "Good",
+            2: "Fair",
+            3: "Moderate",
+            4: "Poor",
+            5: "Very Poor"
         }
-        aqi_description = aqi_levels.get(aqi, "Desconhecida")
+        aqi_description = aqi_levels.get(aqi, "Unknown")
 
         components_data = air_quality_data['list'][0]['components']
         col1, col2, col3, col4 = st.columns(4)
@@ -785,7 +790,7 @@ def display_weather(weather_data, forecast_data=None, air_quality_data=None):
         st.info("**PM2.5**: Fine particles | **O3**: Ozone | **CO**: Carbon Monoxide")
 
 def display_world_map():
-    """Exibe um mapa mundial interativo com base na localização do usuário ou padrão."""
+    """Displays an interactive world map based on user or default location."""
     st.subheader("Explore Global Weather")
     st.write("Use the sidebar to search for weather in a specific city.")
 
@@ -800,7 +805,7 @@ def display_world_map():
 
     st.map(map_data, zoom=3)
 
-# --- FUNÇÃO PRINCIPAL ---
+# --- MAIN FUNCTION ---
 
 def main():
     setup_page_config()
@@ -812,18 +817,22 @@ def main():
     if 'speech_summary' not in st.session_state:
         st.session_state.speech_summary = None
 
-    # Chave da API do OpenWeatherMap (substitua pela sua chave real)
-    api_key = os.getenv("OPENWEATHER_API_KEY")
-    if api_key == "SUA_CHAVE_API_AQUI":
-        st.error("Por favor, defina a variável de ambiente OPENWEATHER_API_KEY com sua chave da API do OpenWeatherMap.")
+    # Chave da API do OpenWeatherMap
+    api_key = os.getenv('OPENWEATHER_API_KEY')
+    if not api_key:
+        st.error("Please set the OPENWEATHER_API_KEY environment variable with your OpenWeatherMap API key.")
         st.stop()
 
     # Credenciais da NASA Earthdata para earthaccess
     # Para usar a API TEMPO da NASA, você precisa de uma conta Earthdata e configurar suas credenciais.
     # Visite https://urs.earthdata.nasa.gov/users/new para criar uma conta.
-    # As credenciais podem ser configuradas via variáveis de ambiente EARTHDATA_USERNAME e EARTHDATA_PASSWORD
-    # ou usando `earthaccess.login(persist=True)` e inserindo-as interativamente (não possível neste ambiente).
-    # Para este aplicativo, vamos assumir que as variáveis de ambiente estão configuradas ou que o usuário fará o login manualmente se necessário.
+    # As credenciais devem ser configuradas via variáveis de ambiente EARTHDATA_USERNAME e EARTHDATA_PASSWORD
+    earthdata_username = os.getenv('EARTHDATA_USERNAME')
+    earthdata_password = os.getenv('EARTHDATA_PASSWORD')
+    
+    if not earthdata_username or not earthdata_password:
+        st.warning("NASA Earthdata credentials not found. TEMPO air quality data will not be available. Please set EARTHDATA_USERNAME and EARTHDATA_PASSWORD environment variables.")
+        st.info("You can create a free account at https://urs.earthdata.nasa.gov/users/new")
 
 
     st.sidebar.header("🌍 Weather Settings")
@@ -831,8 +840,8 @@ def main():
     with st.sidebar:
         st.header("🏙️ City Selection")
         city_input = st.text_input(
-            "Digite o nome da cidade:",
-            placeholder="Ex: São Paulo, Rio de Janeiro, Tokyo (etc)",
+            "Enter city name:",
+            placeholder="E.g., New York, Los Angeles, Chicago",
             key="city_input_sidebar"
         )
 
@@ -862,7 +871,7 @@ def main():
         # Seleção de atividade
         st.header("🏃‍♂️ Your Activity")
         activity = st.selectbox(
-            "Que atividade você pretende fazer?",
+            "What activity do you plan to do?",
             ["Running", "Walking", "Cycling", "Outdoor Sports", "Light Exercises", "Outdoor Rest"],
             key="activity_selector",
             help="Select the activity you plan to do"
@@ -873,7 +882,7 @@ def main():
         # Seleção de condição física
         st.header("💪 Physical Condition")
         condition = st.selectbox(
-            "Como está sua condição física?",
+            "How is your physical condition?",
             ["Excellent", "Good", "Moderate", "Sensitive", "Delicate"],
             key="condition_selector",
             help="Your physical condition influences safety recommendations"

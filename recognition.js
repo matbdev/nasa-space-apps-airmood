@@ -1,7 +1,6 @@
-
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognition = new SpeechRecognition();
-recognition.lang = 'pt-BR';
+recognition.lang = 'en-US';
 recognition.interimResults = false;
 recognition.maxAlternatives = 1;
 
@@ -21,16 +20,15 @@ function startRecognition() {
 
     isRecognizing = true;
     voiceButton.classList.add('active');
-    voiceStatus.textContent = '🔊 Ouvindo...';
+        voiceStatus.textContent = '🔊 Listening...';
     recognition.start();
 }
 
 recognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
     const voiceStatus = document.getElementById('voiceStatus');
-    voiceStatus.textContent = `Você disse: ${transcript}`;
-
-    // Envia a transcrição para o Streamlit usando postMessage
+                                     voiceStatus.textContent = `You said: ${transcript}`;
+    // Sends the transcript to Streamlit using postMessage
     window.parent.postMessage({
         type: 'streamlit:setComponentValue',
         args: {
@@ -39,7 +37,7 @@ recognition.onresult = (event) => {
         }
     }, '*');
 
-    // Recarrega a página após o reconhecimento para processar a nova entrada
+    // Reloads the page after recognition to process the new input
     setTimeout(() => {
         window.parent.location.reload();
     }, 100);
@@ -50,21 +48,21 @@ recognition.onend = () => {
     const voiceButton = document.getElementById('voiceButton');
     const voiceStatus = document.getElementById('voiceStatus');
     voiceButton.classList.remove('active');
-    voiceStatus.textContent = 'Reconhecimento finalizado.';
-    // Não recarrega aqui, pois já é feito no onresult
+        voiceStatus.textContent = 'Recognition finished.';
+    // Does not reload here, as it is already done in onresult
     // setTimeout(() => { voiceStatus.textContent = ''; }, 2000);
 };
 
 recognition.onerror = (event) => {
     isRecognizing = false;
     const voiceStatus = document.getElementById('voiceStatus');
-    voiceStatus.textContent = `Erro de reconhecimento: ${event.error}`;
+        voiceStatus.textContent = `Recognition error: ${event.error}`;
     console.error('Speech recognition error', event.error);
     const voiceButton = document.getElementById('voiceButton');
     voiceButton.classList.remove('active');
 };
 
-// Informa ao Streamlit que o componente está pronto (se necessário, dependendo da integração)
+// Informs Streamlit that the component is ready (if necessary, depending on the integration)
 // window.addEventListener('load', () => {
 //     if (window.parent.Streamlit) {
 //         window.parent.Streamlit.setComponentReady();
@@ -74,4 +72,3 @@ recognition.onerror = (event) => {
 // });
 
 document.getElementById('voiceButton').onclick = startRecognition;
-
