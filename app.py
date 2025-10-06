@@ -704,7 +704,7 @@ def main():
         st.session_state.speech_summary = None
 
     # Chave da API do OpenWeatherMap (substitua pela sua chave real)
-    api_key = os.getenv("OPENWEATHER_API_KEY", "a384af5e1c47ff5c3b3bb3c47491476f")
+    api_key = os.getenv("OPENWEATHER_API_KEY")
     if api_key == "SUA_CHAVE_API_AQUI":
         st.error("Por favor, defina a variável de ambiente OPENWEATHER_API_KEY com sua chave da API do OpenWeatherMap.")
         st.stop()
