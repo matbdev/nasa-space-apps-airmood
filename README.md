@@ -1,104 +1,76 @@
-# AirMood: Your Personal Voice-Powered Air Quality & Weather Assistant
+# AirMood: Voice-Powered Personal Air Quality and Weather Assistant
 
-**AirMood** is an interactive web application that reimagines how people experience weather and air quality forecasts, putting health and accessibility at the center. Built for the NASA Space Apps Challenge, AirMood fuses real-time meteorological data, advanced air quality insights, and the power of voice interaction to help users make better, safer decisions—wherever they are.
+**AirMood** is an interactive web application designed to transform how users access and understand weather and air quality forecasts. By merging real-time meteorological data from OpenWeatherMap with cutting-edge air quality insights from NASA’s TEMPO mission (via the NASA Earthdata platform), AirMood delivers personalized health recommendations—accessible by text or voice.
 
----
-
-## 🚀 Challenge Context
-
-This project is a submission for the NASA Space Apps Challenge and directly addresses the [TEMPO Mission Challenge](https://www.nasa.gov/tempo/):
-
-> **"Build a web-based app that forecasts air quality by integrating real-time TEMPO data with ground-based air quality measurements and weather data, notifying users of poor air quality, and helping to improve public health decisions."**
-
-TEMPO (Tropospheric Emissions: Monitoring of Pollution) is revolutionizing air quality monitoring in North America by providing unprecedented, hourly resolution data from space. Combined with ground-based sensors (like Pandora, OpenAQ) and weather data, these datasets allow for actionable, hyperlocal air quality forecasts that empower communities and protect public health.
-
-Outdoor air pollution is a leading global health risk, contributing to millions of deaths annually (WHO). Vulnerable groups—including children, the elderly, and people in industrial or fire-prone areas—are especially at risk. Our app is designed to help individuals, families, and communities limit exposure by making complex air quality and weather data simple, accessible, and actionable.
+This project is a submission for the [NASA Space Apps Challenge 2025 – From Earthdata to Action: Cloud Computing with Earth Observation Data for Predicting Cleaner, Safer Skies](https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/?tab=details).
 
 ---
 
 ## ✨ Key Features
 
-- **Integrated Data Sources:** Combines real-time weather (OpenWeatherMap), air quality (NASA's TEMPO, OpenAQ—simulated in this prototype), and satellite-based insights.
-- **Personalized Recommendations:** Calculates a dynamic "activity score" (0–100) based on weather, air quality, user activity, and physical condition—for truly user-centric health advice.
-- **Voice Assistant:** 
-  - **Speech-to-Text:** Ask “What’s the air quality like in New York?” with your voice.
-  - **Text-to-Speech:** The app speaks back a detailed, friendly summary—tailored to your planned activity and health sensitivities.
-- **Clear Visualizations:**
-  - **Modern Dashboard:** See temperature, humidity, wind, pressure, and air quality at a glance.
-  - **5-Day Forecast:** Daily weather outlooks and air quality trends.
-  - **Proactive Alerts:** Warnings for thunderstorms, extreme heat/cold, poor air quality, and more.
-- **User-Centric Design:** 
-  - Designed for health-sensitive groups, outdoor enthusiasts, families, and public decision-makers.
-  - Simple, accessible interface for all ages and backgrounds.
-- **Scalable Architecture:** Built with Streamlit and JavaScript, ready for cloud or local deployment.
+- **Personalized Recommendations:** Calculates an "activity score" (0–100) by cross-referencing weather data (temperature, humidity, wind), tropospheric NO₂ air quality data from NASA, the user’s planned activity, and physical condition.
+- **Direct NASA Earthdata Integration:** Retrieves tropospheric NO₂ data from NASA’s TEMPO satellite using the [earthaccess library](https://nsidc.github.io/earthaccess/), providing robust, science-backed health advice. If TEMPO data is unavailable, the app gracefully falls back to OpenWeatherMap Air Quality data.
+- **Full Voice Assistant:**
+  - **Speech-to-Text:** Users can ask, “What’s the air quality in São Paulo?” and more using only their voice.
+  - **Text-to-Speech:** The application reads back a comprehensive, user-tailored summary, including weather, air quality, and activity recommendations.
+- **Detailed Data Visualization:**
+  - **Modern Weather Dashboard:** Displays current temperature, feels-like, humidity, wind, and pressure.
+  - **5-Day Forecast:** Offers clear, daily weather and air quality trends.
+  - **Proactive Safety Alerts:** Notifies users of extreme events such as storms, high heat, or hazardous air quality, with actionable guidance.
+- **Accessible and User-Centric:** Designed for health-sensitive groups, families, athletes, educators, and public decision-makers.
 
 ---
 
-## 🛰️ Data Integration & Novelty
+## 🛰️ NASA Data & Cloud-Native Architecture
 
-AirMood is inspired by the challenge of merging **satellite**, **ground-based**, and **weather** data. In a production version, the app would:
-
-- Fetch near real-time TEMPO data (e.g., NO₂, HCHO, ozone).
-- Integrate ground-based measurements (Pandora, TolNet, OpenAQ).
-- Cross-validate satellite and ground data for accuracy.
-- Provide hyperlocal forecasts and historical trends.
-- Visualize data with intuitive, user-friendly graphics.
-- Alert users based on personalized thresholds and health risk factors.
-
-*Note: This prototype simulates NASA air quality data but is architected to support live APIs (TEMPO, OpenAQ, etc.) as they become available.*
+- **TEMPO Satellite Data:** AirMood leverages NASA’s [Earthdata cloud platform](https://earthdata.nasa.gov/) to access real-time tropospheric NO₂ data from the TEMPO mission, using the [earthaccess Python library](https://nsidc.github.io/earthaccess/). This enables high-resolution, hourly air quality forecasts across North America.
+- **Fallback Strategy:** If TEMPO data is inaccessible, the app automatically retrieves comparable air quality data (AQI, PM2.5, O₃, CO) from OpenWeatherMap’s Air Pollution API, ensuring continuous functionality.
+- **Geospatial Processing:** netCDF4 and numpy are used to handle and extract insights from large, cloud-hosted Earth observation datasets.
 
 ---
 
-## 📊 Example Use Cases
-
-- **Sensitive Groups:** Parents or school staff get instant alerts if outdoor conditions are unsafe for children.
-- **Outdoor Athletes:** Runners, cyclists, or coaches receive tailored recommendations factoring in ozone, particulates, and weather.
-- **Policy Makers:** Visualize local air quality trends, compare satellite and ground data in real time, and download reports.
-- **Wildfire Response:** Emergency teams see live pollutant levels and get notified of spikes due to smoke events.
-- **General Public:** Anyone can check if it’s a good day to exercise, walk, or simply relax outside.
-
----
-
-## 🛠️ Tech Stack
+## 🚀 Tech Stack
 
 - **Backend:** Python
-- **Frontend:** [Streamlit](https://streamlit.io/)
+- **Frontend:** Streamlit
 - **Data Visualization:** Pandas, Plotly
-- **APIs:**
-  - **OpenWeatherMap API:** Real-time weather and forecast data.
-  - **NASA TEMPO API & OpenAQ (Simulated):** Air quality data.
-- **Voice Assistant:** Web Speech API (JavaScript) for speech recognition and synthesis.
-
----
-
-## 🗂️ Project Structure
-
-```
-project-root/
-│
-├── app.py              # Main Streamlit application
-├── recognition.js      # Voice recognition (speech-to-text) script
-├── requirements.txt    # Python dependencies
-└── README.md           # (This file)
-```
+- **APIs and Data Sources:**
+  - [OpenWeatherMap API](https://openweathermap.org/api): Real-time weather and air quality data.
+  - [NASA Earthdata (earthaccess)](https://earthdata.nasa.gov/): Direct access to tropospheric NO₂ from TEMPO.
+- **Voice Assistant:** Web Speech API (JavaScript) for speech recognition and synthesis ([MDN Docs](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)).
+- **Data Processing:** [netCDF4](https://unidata.github.io/netcdf4-python/) and [NumPy](https://numpy.org/) for geospatial and scientific data manipulation.
 
 ---
 
 ## ⚙️ How to Run the Project
 
+Follow these steps to set up and run AirMood locally.
+
 ### 1. Prerequisites
 
 - Python 3.8 or higher
 - pip (Python package manager)
-- A modern web browser (Chrome, Edge) supporting the Web Speech API
+- A modern web browser supporting the Web Speech API (e.g., Chrome, Edge)
+- A [NASA Earthdata](https://urs.earthdata.nasa.gov/) account (to access TEMPO data)
 
-### 2. Installation
+### 2. Project Structure
 
-Clone this repository and navigate to the folder:
+```
+nasa-space-apps-airmood/
+│
+├── app.py              # Main Streamlit application
+├── recognition.js      # Voice recognition script (JavaScript)
+├── requirements.txt    # Python dependencies
+└── README.md           # (This file)
+```
+
+### 3. Installation & Configuration
+
+Clone the repository and navigate to the folder:
 
 ```bash
-git clone https://github.com/your-repository.git
-cd your-project
+git clone https://github.com/matbdev/nasa-space-apps-airmood.git
+cd nasa-space-apps-airmood
 ```
 
 Create and activate a virtual environment:
@@ -113,75 +85,82 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-Install dependencies:
+Install the dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configure API Keys
+#### Set Environment Variables
 
-Set these environment variables in your shell (replace with your keys):
+- **OpenWeatherMap API Key:**  
+  Obtain a free key from [OpenWeatherMap](https://openweathermap.org/api) and set it:
+  ```bash
+  export OPENWEATHER_API_KEY="your_openweathermap_key_here"
+  ```
+- **NASA Earthdata Credentials:**  
+  Create a free account at [URS](https://urs.earthdata.nasa.gov/).  
+  Set your username and password as environment variables:
+  ```bash
+  export EARTHDATA_USERNAME="your_earthdata_username"
+  export EARTHDATA_PASSWORD="your_earthdata_password"
+  ```
 
-- **OpenWeatherMap API Key:** Get from [OpenWeatherMap](https://openweathermap.org/api)
-- **NASA API Key:** Get from [api.nasa.gov](https://api.nasa.gov)
+> On Windows (PowerShell), use `$env:VAR_NAME="value"` syntax.
 
-```bash
-# macOS/Linux
-export OPENWEATHER_API_KEY="your_openweathermap_key_here"
-export NASA_API_KEY="your_nasa_key_here"
+---
 
-# Windows (PowerShell)
-$env:OPENWEATHER_API_KEY="your_openweathermap_key_here"
-$env:NASA_API_KEY="your_nasa_key_here"
-```
+### 4. Run the Application
 
-### 4. Run the App
+Start the Streamlit server:
 
 ```bash
 streamlit run app.py
 ```
 
-Open your browser to the displayed URL. Grant microphone permissions to use the voice assistant.
+The application will open automatically in your browser.  
+Grant microphone permission when prompted to use the voice assistant.
 
 ---
 
-## 📚 Data Sources & References
+## 📚 References & Data Sources
 
-- [NASA TEMPO Mission](https://www.nasa.gov/tempo/)
+- [NASA Earthdata Cloud](https://earthdata.nasa.gov/)
+- [TEMPO Mission](https://tempo.si.edu/)
+- [earthaccess Python Library](https://nsidc.github.io/earthaccess/)
 - [OpenWeatherMap API](https://openweathermap.org/api)
-- [OpenAQ Platform](https://openaq.org/)
-- [Pandora Air Quality Network](https://www-air.larc.nasa.gov/missions/Pandora/)
-- [World Health Organization: Air Pollution](https://www.who.int/health-topics/air-pollution)
+- [netCDF4 Python Library](https://unidata.github.io/netcdf4-python/)
+- [NumPy](https://numpy.org/)
 - [Web Speech API (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)
+- [Space Apps Challenge: From Earthdata to Action](https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/?tab=details)
 
 ---
 
 ## 👥 Potential Users
 
-- Health-sensitive individuals & caregivers
+- Health-sensitive individuals and caregivers
 - Schools, eldercare, and healthcare facilities
-- Public health and policy professionals
-- Outdoor event organizers and coaches
+- Public health professionals and policy makers
+- Outdoor athletes, event organizers, and coaches
 - Emergency responders and disaster planners
 - Environmental researchers and citizen scientists
 
 ---
 
-## 🌟 Future Improvements
+## 🌟 Future Directions
 
-- Live integration with TEMPO and OpenAQ APIs
-- Historical air quality and weather trend analysis
-- Advanced risk models using demographic/socioeconomic data
-- Enhanced alerting (push notifications, SMS, email)
-- Mobile app & PWA support
-- Support for more languages and accessibility features
+- Live integration with additional NASA and partner datasets (e.g., OpenAQ, Pandora, TolNet)
+- Mobile app and PWA support
+- Automated historical air quality and weather trend analysis
+- Advanced risk models using demographic and socioeconomic data
+- Push notifications, SMS, or email alerts
+- Multi-language and accessibility enhancements
 
 ---
 
 ## 📢 License & Credits
 
-Developed for the NASA Space Apps Challenge by [Your Team/Name].  
-This project is for educational and non-commercial purposes. Please cite NASA and OpenWeatherMap data as appropriate.
+Developed for the [NASA Space Apps Challenge 2025](https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/?tab=details) by [Your Team/Name].  
+This project is for educational and non-commercial purposes. Please credit NASA Earthdata and OpenWeatherMap as appropriate.
 
 ---

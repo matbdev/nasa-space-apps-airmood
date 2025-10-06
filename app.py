@@ -17,7 +17,7 @@ import numpy as np
 def setup_page_config():
     """Configura as propriedades da página Streamlit."""
     st.set_page_config(
-        page_title="Previsão do Tempo Avançada com Assistente de Voz",
+        page_title="Advanced Weather Forecast with Voice Assistant",
         page_icon="🎙️",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -143,7 +143,7 @@ def load_custom_css():
 def get_weather(city: str, api_key: str) -> Optional[Dict[str, Any]]:
     """Busca os dados do tempo atual para uma cidade."""
     base_url = "http://api.openweathermap.org/data/2.5/weather"
-    params = {"q": city, "appid": api_key, "units": "metric", "lang": "pt_br"}
+    params = {"q": city, "appid": api_key, "units": "metric", "lang": "en"}
     try:
         response = requests.get(base_url, params=params)
         response.raise_for_status()
@@ -155,7 +155,7 @@ def get_weather(city: str, api_key: str) -> Optional[Dict[str, Any]]:
 def get_forecast(city: str, api_key: str) -> Optional[Dict[str, Any]]:
     """Busca a previsão de 5 dias para uma cidade."""
     base_url = "http://api.openweathermap.org/data/2.5/forecast"
-    params = {"q": city, "appid": api_key, "units": "metric", "lang": "pt_br", "cnt": 40}
+    params = {"q": city, "appid": api_key, "units": "metric", "lang": "en", "cnt": 40}
     try:
         response = requests.get(base_url, params=params)
         response.raise_for_status()
@@ -305,27 +305,27 @@ def calculate_activity_score(weather_data: Dict, air_quality_data: Optional[Dict
             score -= 10
         elif temp < 5 or temp > 35:
             score -= 30
-            recommendations.append("Temperatura extrema para corrida")
+            recommendations.append("Extreme temperature for running")
         
         if humidity > 80:
             score -= 20
-            recommendations.append("Umidade alta pode causar desconforto")
+            recommendations.append("High humidity can cause discomfort")
         
         if wind_speed > 8:
             score -= 15
-            recommendations.append("Ventos fortes podem dificultar a corrida")
+            recommendations.append("Strong winds can make running difficult")
     
     elif activity == "Caminhada":
         if 10 <= temp <= 30:
             score += 5
         elif temp < 0 or temp > 35:
             score -= 20
-            recommendations.append("Temperatura não ideal para caminhadas longas")
+            recommendations.append("Temperature not ideal for long walks")
     
     elif activity == "Ciclismo":
         if wind_speed > 10:
             score -= 25
-            recommendations.append("Ventos muito fortes para ciclismo seguro")
+            recommendations.append("Very strong winds for safe cycling")
         elif 5 < wind_speed <= 10:
             score -= 10
         
@@ -337,7 +337,7 @@ def calculate_activity_score(weather_data: Dict, air_quality_data: Optional[Dict
     elif activity == "Esportes ao ar livre":
         if weather_main in ["Rain", "Thunderstorm", "Snow"]:
             score -= 40
-            recommendations.append("Condições climáticas inadequadas para esportes")
+            recommendations.append("Inadequate weather conditions for sports")
         elif weather_main in ["Drizzle", "Mist"]:
             score -= 20
     
@@ -350,51 +350,51 @@ def calculate_activity_score(weather_data: Dict, air_quality_data: Optional[Dict
     elif activity == "Descanso ao ar livre":
         if weather_main in ["Thunderstorm"]:
             score -= 30
-            recommendations.append("Tempestades não são seguras para atividades externas")
+            recommendations.append("Storms are not safe for outdoor activities")
         elif temp < -10 or temp > 40:
             score -= 10
     
     # Ajustes por condição física
     condition_multipliers = {
-        "Excelente": 1.0,
-        "Boa": 0.9,
-        "Moderada": 0.8,
-        "Sensível": 0.6,
-        "Delicada": 0.4
+        "Excellent": 1.0,
+        "Good": 0.9,
+        "Moderate": 0.8,
+        "Sensitive": 0.6,
+        "Delicate": 0.4
     }
     score *= condition_multipliers.get(condition, 0.8)
     
     # Penalidades por qualidade do ar
     if aqi >= 4:
         score -= 40
-        recommendations.append("Qualidade do ar muito ruim - evite atividades externas")
+        recommendations.append("Very poor air quality - avoid outdoor activities")
     elif aqi == 3:
         score -= 20
-        recommendations.append("Qualidade do ar moderada - grupos sensíveis devem ter cuidado")
+        recommendations.append("Moderate air quality - sensitive groups should be careful")
     elif aqi >= 2:
         score -= 5
     
     # Penalidades por condições climáticas
     if weather_main == "Thunderstorm":
         score -= 50
-        recommendations.append("Tempestades são perigosas - fique em local seguro")
+        recommendations.append("Storms are dangerous - stay in a safe place")
     elif weather_main == "Rain":
         score -= 25
-        recommendations.append("Chuva pode tornar atividades desconfortáveis ou perigosas")
+        recommendations.append("Rain can make activities uncomfortable or dangerous")
     elif weather_main == "Snow":
         score -= 20
-        recommendations.append("Neve pode dificultar movimentação")
+        recommendations.append("Snow can make movement difficult")
     
     return int(max(0, min(100, score))), recommendations
 
 def get_recommendation_status(score: int) -> Tuple[str, str, str]:
     """Retorna o status da recomendação com base no score."""
     if score >= 70:
-        return "Recomendado", "recommendation-excellent", "✅"
+        return "Recommended", "recommendation-excellent", "✅"
     elif score >= 40:
-        return "Cautela", "recommendation-caution", "⚠️"
+        return "Caution", "recommendation-caution", "⚠️"
     else:
-        return "Não Recomendado", "recommendation-not-recommended", "❌"
+        return "Not Recommended", "recommendation-not-recommended", "❌"
 
 # --- FUNÇÕES DE SÍNTESE DE VOZ ---
 
@@ -403,7 +403,7 @@ def generate_comprehensive_speech_summary(weather_data: Dict, air_quality_data: 
                                         activity: str, condition: str, forecast_data: Optional[Dict] = None) -> str:
     """Gera um resumo completo e detalhado para síntese de voz."""
     if not weather_data:
-        return "Não foi possível obter os dados do tempo."
+        return "Could not retrieve weather data."
 
     city = weather_data["name"]
     country = weather_data["sys"]["country"]
@@ -418,52 +418,52 @@ def generate_comprehensive_speech_summary(weather_data: Dict, air_quality_data: 
     sunrise = datetime.fromtimestamp(weather_data["sys"]["sunrise"]).strftime("%H:%M")
     sunset = datetime.fromtimestamp(weather_data["sys"]["sunset"]).strftime("%H:%M")
     
-    summary = f"Resumo completo do tempo para {city}, {country}. "
-    summary += f"A temperatura atual é de {temp:.0f} graus Celsius, com sensação térmica de {feels_like:.0f} graus. "
-    summary += f"O céu está com {description}. "
-    summary += f"A umidade do ar é de {humidity} por cento. "
-    summary += f"O vento está a {wind_speed:.1f} metros por segundo. "
-    summary += f"A pressão atmosférica é de {pressure} hectopascais. "
-    summary += f"O nascer do sol foi às {sunrise} e o pôr do sol será às {sunset}. "
+    summary = f"Complete weather summary for {city}, {country}. "
+    summary += f"The current temperature is {temp:.0f} degrees Celsius, with a feels like temperature of {feels_like:.0f} degrees. "
+    summary += f"The sky is {description}. "
+    summary += f"The humidity is {humidity} percent. "
+    summary += f"The wind speed is {wind_speed:.1f} meters per second. "
+    summary += f"The atmospheric pressure is {pressure} hectopascals. "
+    summary += f"Sunrise was at {sunrise} and sunset will be at {sunset}. "
 
     # Informações de qualidade do ar
     if air_quality_data:
         aqi = air_quality_data["list"][0]["main"]["aqi"]
-        aqi_levels = {1: "boa", 2: "razoável", 3: "moderada", 4: "ruim", 5: "muito ruim"}
-        summary += f"A qualidade do ar está {aqi_levels.get(aqi, 'desconhecida')}. "
+        aqi_levels = {1: "good", 2: "fair", 3: "moderate", 4: "poor", 5: "very poor"}
+        summary += f"The air quality is {aqi_levels.get(aqi, 'unknown')}. "
         
         components = air_quality_data["list"][0]["components"]
-        summary += f"Os níveis de poluentes são: PM 2.5 com {components['pm2_5']} microgramas por metro cúbico, "
-        summary += f"ozônio com {components['o3']} microgramas por metro cúbico. "
+        summary += f"Pollutant levels are: PM 2.5 at {components['pm2_5']} micrograms per cubic meter, "
+        summary += f"ozone at {components['o3']} micrograms per cubic meter. "
 
     # Previsão para as próximas horas
     if forecast_data and forecast_data.get("list"):
         next_forecast = forecast_data["list"][0]
         next_time = datetime.fromtimestamp(next_forecast["dt"]).strftime("%H:%M")
         next_temp = next_forecast["main"]["temp"]
-        summary += f"Para as próximas horas, às {next_time}, a temperatura será de {next_temp:.0f} graus. "
+        summary += f"For the next few hours, at {next_time}, the temperature will be {next_temp:.0f} degrees. "
 
     # Recomendação para atividade
     status, _, _ = get_recommendation_status(score)
-    summary += f"A recomendação para a atividade de {activity}, considerando sua condição física como {condition}, é: {status}, com uma pontuação de {score} de 100 pontos. "
+    summary += f"The recommendation for {activity}, considering your physical condition as {condition}, is: {status}, with a score of {score} out of 100 points. "
 
-    # Orientações específicas
+    # Specific guidance
     if recommendations:
-        summary += "Orientações específicas: " + ". ".join(recommendations) + ". "
+        summary += "Specific guidance: " + ". ".join(recommendations) + ". "
     
-    # Dicas gerais baseadas nas condições
+    # General tips based on conditions
     if temp > 30:
-        summary += "Lembre-se de se manter hidratado e usar protetor solar. "
+        summary += "Remember to stay hydrated and use sunscreen. "
     elif temp < 10:
-        summary += "Vista roupas adequadas para o frio. "
+        summary += "Wear appropriate clothing for the cold. "
     
     if humidity > 80:
-        summary += "A alta umidade pode causar desconforto, beba bastante água. "
+        summary += "High humidity can cause discomfort, drink plenty of water. "
     
     if wind_speed > 10:
-        summary += "Cuidado com ventos fortes, evite áreas com árvores altas. "
+        summary += "Beware of strong winds, avoid areas with tall trees. "
 
-    summary += "Tenha um ótimo dia e pratique suas atividades com segurança!"
+    summary += "Have a great day and practice your activities safely!"
     
     return summary
 
@@ -472,10 +472,10 @@ def extract_city_from_transcript(text: str) -> Optional[str]:
     text = text.lower().strip()
     
     # Remove palavras comuns e conectores
-    stop_words = ["tempo", "clima", "previsão", "em", "para", "de", "da", "do", "na", "no", "como", "está", "o"]
+    stop_words = ["weather", "forecast", "in", "for", "of", "the", "how", "is", "a"]
     
-    # Procura por gatilhos específicos
-    triggers = ["em ", "para ", "de ", "da ", "do ", "na ", "no "]
+    # Look for specific triggers
+    triggers = ["in ", "for "]
     for trigger in triggers:
         if trigger in text:
             parts = text.split(trigger)
@@ -519,25 +519,25 @@ def voice_assistant_component(text_to_speak: Optional[str] = None):
                 
                 // Eventos da síntese de voz
                 utterance.onstart = function() {{
-                    document.getElementById(\'speakStatus\').textContent = \'🔊 Falando...\';
+                    document.getElementById(\'speakStatus\').textContent = \'🔊 Speaking...\';
                 }};
                 
                 utterance.onend = function() {{
-                    document.getElementById(\'speakStatus\').textContent = \'✅ Concluído\';
+                    document.getElementById(\'speakStatus\').textContent = \'✅ Completed\';
                     setTimeout(() => {{
                         document.getElementById(\'speakStatus\').textContent = \'\';
                     }}, 2000);
                 }};
                 
                 utterance.onerror = function(e) {{
-                    console.error(\'Erro na síntese de voz:\', e);
-                    document.getElementById(\'speakStatus\').textContent = \'❌ Erro na fala\';
+                    console.error(\'Speech synthesis error:\', e);
+                    document.getElementById(\'speakStatus\').textContent = \'❌ Speech Error\';
                 }};
                 
                 window.speechSynthesis.speak(utterance);
             }} else {{
-                console.warn(\'Speech Synthesis API não suportada neste navegador.\');
-                document.getElementById(\'speakStatus\').textContent = \'API de Fala não suportada\';
+                console.warn(\'Speech Synthesis API not supported in this browser.\');
+                document.getElementById(\'speakStatus\').textContent = \'Speech API Not Supported\';
             }}
         """
 
@@ -569,15 +569,15 @@ def display_recommendation_card(score: int, recommendations: List[str], activity
     
     st.markdown(f"""
     <div class="recommendation-card {css_class}">
-        <h3>{emoji} Recomendação para {activity}</h3>
+        <h3>{emoji} Recommendation for {activity}</h3>
         <div class="score-display">{score}/100</div>
         <h4>{status}</h4>
-        <p><strong>Condição física:</strong> {condition}</p>
+        <p><strong>Physical condition:</strong> {condition}</p>
     </div>
     """, unsafe_allow_html=True)
     
     if recommendations:
-        with st.expander("**📋 Ver Orientações Específicas**", expanded=True):
+        with st.expander("**📋 View Specific Guidance**", expanded=True):
             for i, rec in enumerate(recommendations, 1):
                 st.warning(f"**{i}.** {rec}")
 
@@ -586,20 +586,20 @@ def show_notifications(weather_data: Dict, air_quality_data: Optional[Dict]):
     alerts = []
     
     if air_quality_data and air_quality_data["list"][0]["main"]["aqi"] >= 4:
-        alerts.append("🚨 **Alerta de Qualidade do Ar**: A qualidade do ar está muito ruim. Evite atividades externas.")
+        alerts.append("🚨 **Air Quality Alert**: Air quality is very poor. Avoid outdoor activities.")
     
     if weather_data and weather_data["weather"][0]["main"] == "Thunderstorm":
-        alerts.append("⛈️ **Alerta de Tempestade**: Condições perigosas. Procure abrigo imediatamente.")
+        alerts.append("⛈️ **Storm Alert**: Dangerous conditions. Seek shelter immediately.")
     
     temp = weather_data["main"]["temp"] if weather_data else 0
     if temp > 35:
-        alerts.append("🔥 **Alerta de Calor Extremo**: Temperatura muito alta. Evite exposição prolongada ao sol.")
+        alerts.append("🔥 **Extreme Heat Alert**: Very high temperature. Avoid prolonged sun exposure.")
     elif temp < -5:
-        alerts.append("🥶 **Alerta de Frio Extremo**: Temperatura muito baixa. Use roupas adequadas.")
+        alerts.append("🥶 **Extreme Cold Alert**: Very low temperature. Wear appropriate clothing.")
     
     wind_speed = weather_data["wind"]["speed"] if weather_data else 0
     if wind_speed > 12:
-        alerts.append("💨 **Alerta de Ventos Fortes**: Cuidado com objetos soltos e evite áreas com árvores.")
+        alerts.append("💨 **Strong Wind Alert**: Beware of loose objects and avoid areas with trees.")
     
     for alert in alerts:
         st.error(alert)
@@ -612,15 +612,15 @@ def display_alerts_panel(weather_data: Dict, air_quality_data: Optional[Dict]):
         alerts.append({
             "type": "danger",
             "icon": "😷",
-            "title": "Qualidade do Ar Muito Ruim",
-            "message": "Evite atividades físicas ao ar livre. Grupos sensíveis devem permanecer em ambientes fechados."
+            "title": "Very Poor Air Quality",
+            "message": "Avoid outdoor physical activities. Sensitive groups should remain indoors."
         })
     elif air_quality_data and air_quality_data["list"][0]["main"]["aqi"] == 3:
         alerts.append({
             "type": "warning",
             "icon": "😟",
-            "title": "Qualidade do Ar Moderada",
-            "message": "Grupos sensíveis (crianças, idosos, pessoas com doenças respiratórias) devem reduzir atividades ao ar livre."
+            "title": "Moderate Air Quality",
+            "message": "Sensitive groups (children, elderly, people with respiratory diseases) should reduce outdoor activities."
         })
 
     if weather_data:
@@ -632,49 +632,49 @@ def display_alerts_panel(weather_data: Dict, air_quality_data: Optional[Dict]):
             alerts.append({
                 "type": "danger",
                 "icon": "⛈️",
-                "title": "Tempestade",
-                "message": "Procure abrigo imediatamente. Risco de raios e ventos fortes."
+            "title": "Thunderstorm",
+            "message": "Seek shelter immediately. Risk of lightning and strong winds."
             })
         elif weather_main == "Rain":
             alerts.append({
                 "type": "info",
                 "icon": "🌧️",
-                "title": "Chuva",
-                "message": "Leve um guarda-chuva. Superfícies podem estar escorregadias."
+            "title": "Rain",
+            "message": "Take an umbrella. Surfaces may be slippery."
             })
         elif weather_main == "Snow":
             alerts.append({
                 "type": "info",
                 "icon": "❄️",
-                "title": "Neve",
-                "message": "Vista-se adequadamente. Cuidado com estradas escorregadias."
+            "title": "Snow",
+            "message": "Dress appropriately. Beware of slippery roads."
             })
 
         if temp > 35:
             alerts.append({
                 "type": "danger",
                 "icon": "🥵",
-                "title": "Calor Extremo",
-                "message": "Mantenha-se hidratado e evite exposição prolongada ao sol. Risco de insolação."
+            "title": "Extreme Heat",
+            "message": "Stay hydrated and avoid prolonged sun exposure. Risk of heatstroke."
             })
         elif temp < 0:
             alerts.append({
                 "type": "warning",
                 "icon": "🥶",
-                "title": "Frio Intenso",
-                "message": "Vista camadas de roupa. Risco de hipotermia em exposições prolongadas."
+            "title": "Intense Cold",
+            "message": "Wear layers of clothing. Risk of hypothermia in prolonged exposures."
             })
 
         if wind_speed > 15:
             alerts.append({
                 "type": "warning",
                 "icon": "💨",
-                "title": "Ventos Fortes",
-                "message": "Cuidado com objetos voadores e galhos de árvores. Evite áreas arborizadas."
+            "title": "Strong Winds",
+            "message": "Beware of flying objects and tree branches. Avoid wooded areas."
             })
 
     if alerts:
-        st.subheader("🚨 Alertas de Segurança")
+        st.subheader("🚨 Safety Alerts")
         for alert in alerts:
             css_class = f"alert-{alert['type']}" if alert['type'] != 'danger' else 'alert-card'
             st.markdown(f"""
@@ -725,7 +725,7 @@ def display_weather(weather_data, forecast_data=None, air_quality_data=None):
 
     # Exibir previsão de 5 dias
     if forecast_data and forecast_data.get('list'):
-        st.subheader("Previsão para os Próximos Dias")
+        st.subheader("Next Days Forecast")
         forecast_df = pd.DataFrame(forecast_data['list'])
         forecast_df['dt_txt'] = pd.to_datetime(forecast_df['dt_txt'])
         forecast_df['date'] = forecast_df['dt_txt'].dt.date
@@ -782,12 +782,12 @@ def display_weather(weather_data, forecast_data=None, air_quality_data=None):
         with col4:
             st.metric("CO", f"{components_data['co']:.1f} µg/m³")
 
-        st.info("**PM2.5**: Partículas finas | **O3**: Ozônio | **CO**: Monóxido de Carbono")
+        st.info("**PM2.5**: Fine particles | **O3**: Ozone | **CO**: Carbon Monoxide")
 
 def display_world_map():
     """Exibe um mapa mundial interativo com base na localização do usuário ou padrão."""
-    st.subheader("Explore o Clima Global")
-    st.write("Use a barra lateral para buscar o clima de uma cidade específica.")
+    st.subheader("Explore Global Weather")
+    st.write("Use the sidebar to search for weather in a specific city.")
 
     # Coordenadas padrão (ex: centro do Brasil)
     default_lat, default_lon = -14.235, -53.132
@@ -826,24 +826,24 @@ def main():
     # Para este aplicativo, vamos assumir que as variáveis de ambiente estão configuradas ou que o usuário fará o login manualmente se necessário.
 
 
-    st.sidebar.header("🌍 Configurações de Clima")
+    st.sidebar.header("🌍 Weather Settings")
 
     with st.sidebar:
-        st.header("🏙️ Seleção de Cidade")
+        st.header("🏙️ City Selection")
         city_input = st.text_input(
             "Digite o nome da cidade:",
-            placeholder="Ex: São Paulo, Rio de Janeiro, Tokyo",
+            placeholder="Ex: São Paulo, Rio de Janeiro, Tokyo (etc)",
             key="city_input_sidebar"
         )
 
-        if st.button("Buscar Clima", key="search_button"):
+        if st.button("Search Weather", key="search_button"):
             st.session_state.city = city_input
             st.rerun()
 
         st.markdown("---")
 
         # Componente de assistente de voz
-        st.header("🎙️ Assistente de Voz")
+        st.header("🎙️ Voice Assistant")
         voice_assistant_component(st.session_state.get("speech_summary", None))
 
         # Captura a entrada de voz do componente JS
@@ -855,45 +855,45 @@ def main():
                 st.session_state.city = recognized_city
                 st.rerun()
             else:
-                st.sidebar.warning("Não foi possível reconhecer uma cidade na sua fala.")
+                st.sidebar.warning("Could not recognize a city in your speech.")
 
         st.markdown("---")
 
         # Seleção de atividade
-        st.header("🏃‍♂️ Sua Atividade")
+        st.header("🏃‍♂️ Your Activity")
         activity = st.selectbox(
             "Que atividade você pretende fazer?",
-            ["Corrida", "Caminhada", "Ciclismo", "Esportes ao ar livre", "Exercícios leves", "Descanso ao ar livre"],
+            ["Running", "Walking", "Cycling", "Outdoor Sports", "Light Exercises", "Outdoor Rest"],
             key="activity_selector",
-            help="Selecione a atividade que você planeja realizar"
+            help="Select the activity you plan to do"
         )
 
         st.markdown("---")
 
         # Seleção de condição física
-        st.header("💪 Condição Física")
+        st.header("💪 Physical Condition")
         condition = st.selectbox(
             "Como está sua condição física?",
-            ["Excelente", "Boa", "Moderada", "Sensível", "Delicada"],
+            ["Excellent", "Good", "Moderate", "Sensitive", "Delicate"],
             key="condition_selector",
-            help="Sua condição física influencia as recomendações de segurança"
+            help="Your physical condition influences safety recommendations"
         )
 
         st.markdown("---")
         st.markdown("""
-        **Legenda das Condições:**
-        - **Excelente**: Atlético, sem limitações
-        - **Boa**: Pratica exercícios regularmente
-        - **Moderada**: Ativo ocasionalmente
-        - **Sensível**: Problemas respiratórios/cardíacos leves
-        - **Delicada**: Condições de saúde que requerem cuidados
+        **Condition Legend:**
+        - **Excellent**: Athletic, no limitations
+        - **Good**: Exercises regularly
+        - **Moderate**: Occasionally active
+        - **Sensitive**: Mild respiratory/cardiac issues
+        - **Delicate**: Health conditions requiring care
         """)
 
     # Área de conteúdo principal
     if st.session_state.city:
         city_to_display = st.session_state.city
         # Busca dados do tempo
-        with st.spinner(f"Buscando dados climáticos para {city_to_display}..."):
+        with st.spinner(f"Fetching weather data for {city_to_display}..."):
             weather_data = get_weather(city_to_display, api_key)
             forecast_data = None
             air_quality_data = None
