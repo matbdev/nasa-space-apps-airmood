@@ -74,7 +74,7 @@ AirMood is inspired by the challenge of merging **satellite**, **ground-based**,
 ## 🗂️ Project Structure
 
 ```
-your-project/
+project-root/
 │
 ├── app.py              # Main Streamlit application
 ├── recognition.js      # Voice recognition (speech-to-text) script
